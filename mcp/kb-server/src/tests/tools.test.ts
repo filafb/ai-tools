@@ -66,3 +66,63 @@ test('wiki_write rejects path traversal', async () => {
   assert.equal(result.success, false);
   assert.ok(result.message.includes('Invalid path'));
 });
+
+const getSearch = async () => (await import('../tools/search.js')).handleWikiSearch;
+
+test('wiki_search returns ranked results with snippets', async () => {
+  const { resetDb } = await import('../db.js');
+  resetDb();
+  const handleWikiWrite = await getWrite();
+
+  handleWikiWrite('pages/concepts/caching.md', [
+    '---', 'title: Caching Strategy', 'summary: How to cache API responses',
+    'category: concepts', 'source_type: article',
+    'created_at: 2026-06-24', 'updated_at: 2026-06-24', '---', '',
+    'Use Redis for caching frequently accessed data. Set a TTL of 5 minutes for API responses.',
+  ].join('\n'));
+
+  handleWikiWrite('pages/concepts/databases.md', [
+    '---', 'title: Database Design', 'summary: Postgres schema patterns',
+    'category: concepts', 'source_type: article',
+    'created_at: 2026-06-24', 'updated_at: 2026-06-24', '---', '',
+    'Prefer normalized schemas. Use indexes on foreign keys.',
+  ].join('\n'));
+
+  const handleWikiSearch = await getSearch();
+  const results = handleWikiSearch('caching API', 5);
+
+  assert.ok(results.length >= 1);
+  assert.equal(results[0]!.title, 'Caching Strategy');
+  assert.ok(results[0]!.snippet.length > 0);
+});
+
+test('wiki_search returns full content for top 2 results', async () => {
+  const { resetDb } = await import('../db.js');
+  resetDb();
+  const handleWikiWrite = await getWrite();
+
+  for (let i = 0; i < 3; i++) {
+    handleWikiWrite(`pages/concepts/item-${i}.md`, [
+      '---', `title: Item ${i}`, `summary: Summary for item ${i}`,
+      'category: concepts', 'source_type: article',
+      'created_at: 2026-06-24', 'updated_at: 2026-06-24', '---', '',
+      `Body content for item ${i} about search testing.`,
+    ].join('\n'));
+  }
+
+  const handleWikiSearch = await getSearch();
+  const results = handleWikiSearch('search testing', 10);
+
+  assert.ok(results.length >= 3);
+  assert.ok(results[0]!.content !== undefined, 'top result should have full content');
+  assert.ok(results[1]!.content !== undefined, 'second result should have full content');
+  assert.equal(results[2]?.content, undefined, 'third result should not have full content');
+});
+
+test('wiki_search returns empty array for no match', async () => {
+  const { resetDb } = await import('../db.js');
+  resetDb();
+  const handleWikiSearch = await getSearch();
+  const results = handleWikiSearch('xyzzy_nonexistent_term', 5);
+  assert.equal(results.length, 0);
+});
