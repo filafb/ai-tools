@@ -8,6 +8,8 @@ frontmatter and a system prompt.
 | Agent | Description |
 |-------|-------------|
 | `test-quality-reviewer` | Evaluates test quality across 8 dimensions. Language-agnostic. |
+| `kb-ingest` | Writes approved knowledge chunks to ~/.claude/wiki/, updates index.md and log.md | sonnet |
+| `kb-scope` | Resolves category ambiguity for a KB chunk; asks user to confirm or redirect | haiku |
 
 ## Installation
 
