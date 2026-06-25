@@ -20,6 +20,63 @@ mcp/                         # MCP servers
 └── kb-server/               # Knowledge base MCP server (wiki_search, wiki_read, wiki_write, wiki_list)
 ```
 
+## KB Architecture
+
+```mermaid
+flowchart TB
+    subgraph Session["Claude Code Session"]
+        direction TB
+        subgraph Skills["Skills (human-facing)"]
+            KI["/kb:ingest"]
+            KS["/kb:search"]
+            KST["/kb:status"]
+        end
+        Hook["⏱ Session-start hook\nUserPromptSubmit"]
+    end
+
+    subgraph AgentLayer["Agents"]
+        AI["kb-ingest\nwrites approved chunks"]
+        AS["kb-scope\nresolves category"]
+    end
+
+    subgraph MCP["MCP Server · kb-server"]
+        direction LR
+        WW["wiki_write"]
+        WSR["wiki_search"]
+        WR["wiki_read"]
+        WL["wiki_list"]
+    end
+
+    subgraph Wiki["~/.claude/wiki/"]
+        direction TB
+        DB[("SQLite + FTS5")]
+        Pages["pages/**/*.md"]
+        Idx["index.md"]
+        Log["log.md"]
+    end
+
+    Git[("Git repos\nsource files")]
+    Human(("You"))
+
+    KI -- "present chunks" --> Human
+    Human -- "approve / skip" --> KI
+    KI --> AI
+    AI <-- "resolve\ncategory" --> AS
+    AI --> WW & WR
+
+    KS --> WSR
+    KST --> WL & WR
+
+    Hook -- "git diff" --> Git
+    Hook -- "⚠ stale pages?" --> Human
+
+    WW --> Pages & DB & Idx & Log
+    WSR --> DB
+    DB -. "full content" .-> WSR
+    WR --> Pages
+    WL --> DB
+```
+
 ## Installation
 
 Clone this repo anywhere on your machine, then symlink the artifacts into
