@@ -1,9 +1,13 @@
 #!/usr/bin/env node
-// Runs as a Claude Code UserPromptSubmit hook.
+// Runs as a Claude Code PreToolUse hook.
 // Outputs a plain-text warning if KB pages are stale.
-// Must exit 0 — never block the session.
+// Must exit 0 — never block the tool call.
 
 import { checkStaleness, shouldNotify, markNotified, getHeadCommit, isOnDefaultBranch } from '../staleness.js';
+
+// PreToolUse sends tool info JSON via stdin — drain it without blocking
+process.stdin.resume();
+process.stdin.destroy();
 
 const cwd = process.cwd();
 
@@ -28,6 +32,6 @@ try {
   const head = getHeadCommit(cwd);
   if (head) markNotified(cwd, head);
 } catch {
-  // Never let the hook crash the session
+  // Never let the hook crash a tool call
   process.exit(0);
 }

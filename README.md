@@ -89,8 +89,16 @@ Register the staleness hook in `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "UserPromptSubmit": [
-      "node <repo-root>/mcp/kb-server/dist/hooks/session-start.js"
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node <repo-root>/mcp/kb-server/dist/hooks/session-start.js"
+          }
+        ]
+      }
     ]
   }
 }
