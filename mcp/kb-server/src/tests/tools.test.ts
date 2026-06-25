@@ -126,3 +126,75 @@ test('wiki_search returns empty array for no match', async () => {
   const results = handleWikiSearch('xyzzy_nonexistent_term', 5);
   assert.equal(results.length, 0);
 });
+
+const getRead = async () => (await import('../tools/read.js')).handleWikiRead;
+const getList = async () => (await import('../tools/list.js')).handleWikiList;
+
+test('wiki_read returns full content of an existing page', async () => {
+  const { resetDb } = await import('../db.js');
+  resetDb();
+  const handleWikiWrite = await getWrite();
+  const handleWikiRead = await getRead();
+
+  const md = '---\ntitle: Readable\nsummary: Test\ncategory: concepts\nsource_type: article\ncreated_at: 2026-06-24\nupdated_at: 2026-06-24\n---\n\nReadable body.';
+  handleWikiWrite('pages/concepts/readable.md', md);
+
+  const result = handleWikiRead('pages/concepts/readable.md');
+  assert.ok('content' in result);
+  assert.equal((result as { content: string }).content, md);
+});
+
+test('wiki_read returns error for missing page', async () => {
+  const { resetDb } = await import('../db.js');
+  resetDb();
+  const handleWikiRead = await getRead();
+
+  const result = handleWikiRead('concepts/does-not-exist.md');
+  assert.ok('error' in result);
+});
+
+test('wiki_read rejects path traversal', async () => {
+  const { resetDb } = await import('../db.js');
+  resetDb();
+  const handleWikiRead = await getRead();
+
+  const result = handleWikiRead('../../etc/passwd');
+  assert.ok('error' in result);
+});
+
+test('wiki_list returns all pages when no category given', async () => {
+  const { resetDb, upsertPage } = await import('../db.js');
+  resetDb();
+  const handleWikiList = await getList();
+
+  upsertPage('concepts/a.md', {
+    title: 'A', summary: 'Alpha', category: 'concepts', source_type: 'article',
+    created_at: '2026-06-24', updated_at: '2026-06-24',
+  }, 'body');
+  upsertPage('decisions/b.md', {
+    title: 'B', summary: 'Beta', category: 'decisions', source_type: 'decision',
+    created_at: '2026-06-24', updated_at: '2026-06-24',
+  }, 'body');
+
+  const all = handleWikiList();
+  assert.equal(all.length, 2);
+});
+
+test('wiki_list filters by category', async () => {
+  const { resetDb, upsertPage } = await import('../db.js');
+  resetDb();
+  const handleWikiList = await getList();
+
+  upsertPage('concepts/c.md', {
+    title: 'C', summary: 'Gamma', category: 'concepts', source_type: 'article',
+    created_at: '2026-06-24', updated_at: '2026-06-24',
+  }, 'body');
+  upsertPage('research/d.md', {
+    title: 'D', summary: 'Delta', category: 'research', source_type: 'research',
+    created_at: '2026-06-24', updated_at: '2026-06-24',
+  }, 'body');
+
+  const concepts = handleWikiList('concepts');
+  assert.equal(concepts.length, 1);
+  assert.equal(concepts[0]!.title, 'C');
+});
