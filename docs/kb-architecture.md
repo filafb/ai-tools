@@ -128,7 +128,7 @@ A chronological record of every ingest: what was written, from what source, and 
 
 ### Session-Start Hook
 
-A Node.js script registered as a `PreToolUse` hook in `~/.claude/settings.json`. It runs before every tool call in a Claude Code session.
+A Node.js script registered as a `UserPromptSubmit` hook in `~/.claude/settings.json`. It runs on every user message.
 
 On each invocation it:
 1. Checks whether the current working directory is on the default git branch. If you are on a WIP branch, it exits silently — stale warnings while actively developing would be noise.
@@ -137,26 +137,18 @@ On each invocation it:
 4. If stale pages are found, prints a single warning line listing up to three page titles and suggesting `/kb:status` to review.
 5. Records the current HEAD in `meta` so the warning fires at most once per commit.
 
-The hook always exits 0 and catches all errors — it must never block a tool call.
+The hook always exits 0 and catches all errors — it must never block a session.
 
 Registration in `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node <repo-root>/mcp/kb-server/dist/hooks/session-start.js"
-          }
-        ]
-      }
+    "UserPromptSubmit": [
+      "node <repo-root>/mcp/kb-server/dist/hooks/session-start.js"
     ]
   }
 }
 ```
 
-The `matcher` field is a regex matched against the tool name. `".*"` runs the hook before every tool call; narrowing it (e.g. `"Bash"`) limits invocations but risks missing the check if that tool is never called.
+**Performance.** The hook runs on every user message. To keep this cheap, it uses a per-repo sentinel file at `~/.claude/wiki/.notified-<hash>` containing the last HEAD commit it checked. Common case: one `git rev-parse HEAD` call plus one file read, then exit. The heavier branch check and staleness scan only run when HEAD has actually moved.
