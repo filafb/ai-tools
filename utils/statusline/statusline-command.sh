@@ -19,10 +19,19 @@ else
   usage_str="0%"
 fi
 
+# Fallback: detect linked worktree via git when JSON doesn't provide it
+if [ -z "$worktree" ]; then
+  git_dir=$(git rev-parse --git-dir 2>/dev/null)
+  git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null)
+  if [ -n "$git_dir" ] && [ -n "$git_common_dir" ] && [ "$git_dir" != "$git_common_dir" ]; then
+    worktree=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")
+  fi
+fi
+
 if [ -n "$worktree" ]; then
   worktree_str="${worktree}"
 else
-  worktree_str="no worktree"
+  worktree_str="main"
 fi
 
 GREEN='\033[32m'
@@ -67,19 +76,20 @@ format_rl() {
   pct="$1"
   reset_ts="$2"
   label="$3"
+  date_fmt="${4:-%-I:%M%p}"
   [ -z "$pct" ] && return
   if [ "$pct" -ge 90 ]; then color="$RED"
   elif [ "$pct" -ge 70 ]; then color="$YELLOW"
   else color="$GREEN"
   fi
-  reset_time=$(date -r "$reset_ts" "+%-I:%M%p" 2>/dev/null || date -d "@$reset_ts" "+%-I:%M%p" 2>/dev/null)
+  reset_time=$(date -r "$reset_ts" "+${date_fmt}" 2>/dev/null || date -d "@$reset_ts" "+${date_fmt}" 2>/dev/null)
   bar=$(make_bar "$pct")
   printf "${color}${label} ${bar} ${pct}%% resets ${reset_time}${RESET}"
 }
 
 rate_limit_str=""
 rate_limit_str="${rate_limit_str}$(format_rl "$rl_5h_pct" "$rl_5h_reset" "5h")"
-seven_day=$(format_rl "$rl_7d_pct" "$rl_7d_reset" "7d")
+seven_day=$(format_rl "$rl_7d_pct" "$rl_7d_reset" "7d" "%-d/%b %-I:%M%p")
 [ -n "$seven_day" ] && rate_limit_str="${rate_limit_str} | ${seven_day}"
 
 repo_root=$(cd "$current_dir" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null || echo "$current_dir")
