@@ -166,13 +166,13 @@ Sections are grouped by theme/project, not by time. Time appears per-entry, not 
 
 ## Company Values Cross-Check
 
-Values and role expectations live in a separate file, not in the agent's system prompt:
+Values and role expectations live in a separate file, version-controlled in this repo:
 
 ```
-~/.claude/brag/context.md
+config/brag/context.md   →   symlink   →   ~/.claude/brag/context.md
 ```
 
-The agent reads this file at the start of every gather run. The user edits it directly to update values, add role expectations, or reflect a promotion. The agent never caches it — always reads fresh.
+The agent reads `~/.claude/brag/context.md` at the start of every gather run. The user edits `config/brag/context.md` in the repo (version history, easy diffs). The agent never caches it — always reads fresh.
 
 Suggested structure for `context.md`:
 
@@ -213,8 +213,17 @@ The goal is not completeness scoring — it is to surface the connection between
 skills/brag/SKILL.md           # skill instructions
 skills/brag/README.md          # installation + usage
 agents/brag-documenter.md      # agent definition
-~/.claude/brag/context.md      # company values + role expectations (user-maintained, not in repo)
+config/brag/context.md         # company values + role expectations (version-controlled in repo)
 ```
+
+`config/brag/context.md` is symlinked to `~/.claude/brag/context.md` so the agent can read it from a stable path. The README covers the one-time setup:
+
+```bash
+mkdir -p ~/.claude/brag
+ln -s /Users/<you>/Code/ai-tools/config/brag/context.md ~/.claude/brag/context.md
+```
+
+Editing the file in the repo automatically updates the symlink target — no copy step needed.
 
 The skill and agent are separate artifacts. The skill handles interaction; the agent handles data fetching and document writing.
 
