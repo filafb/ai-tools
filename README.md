@@ -16,6 +16,10 @@ agents/                      # Claude Code custom subagents
 └── kb-ingest.md             # Writes approved KB chunks, updates index and log
 └── kb-scope.md              # Resolves KB category ambiguity
 
+config/                      # Configuration and context files
+└── brag/                     # Brag documenter context (company values, role expectations)
+    └── context.md           # Read by brag-documenter agent; symlinked to ~/.claude/brag/
+
 mcp/                         # MCP servers
 └── kb-server/               # Knowledge base MCP server (wiki_search, wiki_read, wiki_write, wiki_list)
 ```
