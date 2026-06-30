@@ -10,6 +10,7 @@ frontmatter and a system prompt.
 | `test-quality-reviewer` | Evaluates test quality across 8 dimensions. Language-agnostic. |
 | `kb-ingest` | Writes approved knowledge chunks to ~/.claude/wiki/, updates index.md and log.md | sonnet |
 | `kb-scope` | Resolves category ambiguity for a KB chunk; asks user to confirm or redirect | haiku |
+| `brag-documenter` | Gathers work evidence from 6 sources, clusters into topics with values alignment, and merges approved entries into a persistent brag document. Invoked by /brag skill. |
 
 ## Installation
 
