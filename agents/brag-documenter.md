@@ -7,7 +7,9 @@ description: >
   document. Invoked by the /brag skill in two modes: gather (returns BragTopicList JSON)
   and write (updates brag.md on disk).
 model: sonnet
-tools: Read, Write, Bash, mcp__plugin_slack_slack__slack_search_public_and_private, mcp__plugin_slack_slack__slack_read_thread, mcp__plugin_slack_slack__slack_read_channel
+tools: Read, Write, Bash, mcp__plugin_slack_slack__slack_search_public_and_private, mcp__plugin_slack_slack__slack_read_thread, mcp__plugin_slack_slack__slack_read_channel, mcp__linear__linear_search_issues, mcp__linear__linear_get_user, mcp__linear__linear_get_teams
+# Notion MCP tools: add your specific mcp__notion__* tool names here once you know them
+# (run `claude mcp list` and check what notion tools are available)
 ---
 
 You are the brag-documenter agent. You run in one of two modes based on the JSON input you receive. Your final output is your return value — not a message to a human.
@@ -29,7 +31,7 @@ Parse the JSON object in your input.
 
 ### Step 1 — Read context
 
-Read `~/.claude/brag/context.md`. Keep the content in memory — you will use it in the framing step.
+Run `cat ~/.claude/brag/context.md` via Bash to read the context file. Keep the content in memory — you will use it in the framing step.
 
 ### Step 2 — Query all sources in parallel
 
@@ -92,6 +94,7 @@ For each topic cluster, produce a BragTopic object:
 4. `values_alignment`: 1-3 values from context.md that this topic demonstrates
 5. `role_alignment`: 1-2 role expectations from context.md this topic demonstrates
 6. `gap` (optional): an obvious follow-up not yet done (e.g. "No post-mortem filed after this incident", "No PR linked to Linear issue")
+7. `earliest_date`: ISO 8601 date string (YYYY-MM-DD) — the earliest date among all evidence items for this topic. Use `createdAt`, `closedAt`, `mergedAt`, or meeting date depending on source.
 
 If `context_summary` was provided, use it to order topics (most relevant first) and to frame summaries accurately.
 
@@ -100,7 +103,7 @@ If `context_summary` was provided, use it to order topics (most relevant first) 
 Return ONLY a JSON object — no preamble, no explanation, no markdown fencing:
 
 ```
-{"topics":[{"title":"...","summary":"...","evidence":[{"label":"...","url":"..."}],"values_alignment":["..."],"role_alignment":["..."]},{"title":"...","summary":"...","evidence":[{"label":"...","url":"..."}],"values_alignment":["..."],"role_alignment":["..."],"gap":"..."}]}
+{"topics":[{"title":"...","summary":"...","evidence":[{"label":"...","url":"..."}],"values_alignment":["..."],"role_alignment":["..."],"earliest_date":"YYYY-MM-DD"},{"title":"...","summary":"...","evidence":[{"label":"...","url":"..."}],"values_alignment":["..."],"role_alignment":["..."],"gap":"...","earliest_date":"YYYY-MM-DD"}]}
 ```
 
 ---
@@ -113,7 +116,7 @@ Return ONLY a JSON object — no preamble, no explanation, no markdown fencing:
 
 ### Step 1 — Read existing doc
 
-Read `brag_doc_path`. If it does not exist, treat the current content as:
+Read `brag_doc_path`. If `brag_doc_path` starts with `~`, resolve it first: run `echo <path>` via Bash to get the absolute path, then use Read. If it does not exist, treat the current content as:
 ```
 # Brag Document
 ```
@@ -143,7 +146,7 @@ If `gap` is present, add a line after the evidence line:
 *Gap: [gap]*
 ```
 
-Extract Month YYYY from the evidence dates (use the earliest date among evidence items).
+Use the `earliest_date` field from the entry to format the heading date as `Month YYYY` (e.g. `2026-06-25` → `June 2026`).
 
 ### Step 4 — Write
 
