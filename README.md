@@ -10,11 +10,13 @@ skills/                      # Claude Code skills (invoked with /skill-name)
 └── kb-ingest/               # Interactively add a source to the KB
 └── kb-search/               # Search the KB from any session
 └── kb-status/               # Audit KB health and stale pages
+└── brag/                     # Gather and document work accomplishments
 
 agents/                      # Claude Code custom subagents
 └── test-quality-reviewer.md # Test quality evaluation across 8 dimensions
 └── kb-ingest.md             # Writes approved KB chunks, updates index and log
 └── kb-scope.md              # Resolves KB category ambiguity
+└── brag-documenter.md       # Gathers work evidence and merges into brag doc
 
 config/                      # Configuration and context files
 └── brag/                     # Brag documenter context (company values, role expectations)
@@ -57,12 +59,14 @@ ln -s "$REPO/skills/pr-deep-review"  ~/.claude/skills/pr-deep-review
 ln -s "$REPO/skills/kb-ingest"       ~/.claude/skills/kb-ingest
 ln -s "$REPO/skills/kb-search"       ~/.claude/skills/kb-search
 ln -s "$REPO/skills/kb-status"       ~/.claude/skills/kb-status
+ln -s "$REPO/skills/brag"            ~/.claude/skills/brag
 
 # Agents
 mkdir -p ~/.claude/agents
 ln -s "$REPO/agents/test-quality-reviewer.md"  ~/.claude/agents/test-quality-reviewer.md
 ln -s "$REPO/agents/kb-ingest.md"              ~/.claude/agents/kb-ingest.md
 ln -s "$REPO/agents/kb-scope.md"               ~/.claude/agents/kb-scope.md
+ln -s "$REPO/agents/brag-documenter.md"        ~/.claude/agents/brag-documenter.md
 ```
 
 Claude Code picks up new skills and agents automatically — no restart needed.
