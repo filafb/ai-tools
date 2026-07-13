@@ -28,7 +28,33 @@ running a structured interview.
 
 ## Workflow
 
-### 1. Parse arguments
+### 1. Check source availability
+
+Before doing anything else, check which MCP-backed sources are actually reachable:
+```bash
+claude mcp list
+```
+Slack, Linear, and Notion each need a `✔ Connected` status to be queried — `!
+Needs authentication` or `✘ Failed to connect` means that source will be
+silently skipped by the gather agent (it only has whatever tools were live
+when it was dispatched).
+
+If any of Slack, Linear, or Notion is not connected, tell the user before
+proceeding, e.g.:
+```
+Heads up — some sources aren't reachable right now and will be skipped:
+- Linear: ✘ Failed to connect
+- Notion: ! Needs authentication
+
+Run `/mcp` to authenticate/reconnect, or continue anyway with GitHub +
+whatever else is connected?
+```
+Wait for the user to confirm before moving on to step 2 (they may want to
+fix the connection first, or may not care about the missing source for this
+particular run). GitHub, Granola, and Google Calendar are not MCP-based and
+are not affected by this check.
+
+### 2. Parse arguments
 
 Extract from the skill arguments:
 - `since_date`: value of `--since` flag if provided; otherwise computed from last-run state (see below)
@@ -64,7 +90,7 @@ Already up to date — last run covered through LAST_RUN_DATE.
 ```
 Then stop.
 
-### 2. Invoke brag-documenter (gather mode)
+### 3. Invoke brag-documenter (gather mode)
 
 Dispatch the `brag-documenter` agent with this prompt (replace values in CAPS):
 
@@ -76,7 +102,7 @@ If no context summary was provided, omit the `context_summary` field entirely.
 
 Wait for the agent to return. Its output is a JSON string containing a `topics` array.
 
-### 3. Run the interview
+### 4. Run the interview
 
 Parse the JSON topics array. For each topic, present it to the user in this format:
 
@@ -108,11 +134,11 @@ Interview complete. N topics accepted, M skipped.
 Writing to brag doc...
 ```
 
-If zero topics were accepted, say so and skip step 4 (do not invoke the write
-agent) — but still proceed to step 5 to update the last-run state, since the
+If zero topics were accepted, say so and skip step 5 (do not invoke the write
+agent) — but still proceed to step 6 to update the last-run state, since the
 window was gathered and reviewed even though nothing was added.
 
-### 4. Invoke brag-documenter (write mode)
+### 5. Invoke brag-documenter (write mode)
 
 Dispatch the `brag-documenter` agent with:
 ```
@@ -121,7 +147,7 @@ Dispatch the `brag-documenter` agent with:
 
 Wait for the agent to return `"done"`.
 
-### 5. Update last-run state
+### 6. Update last-run state
 
 Record `until_date` (from step 1) as the new last-run date, so the next
 invocation picks up the day after:
@@ -133,7 +159,7 @@ echo '{"last_run_date":"UNTIL_DATE"}' > ~/.claude/brag/last_run.json
 Do this even if zero topics were accepted in the interview — an empty window
 still counts as covered and should not be re-gathered next time.
 
-### 6. Confirm
+### 7. Confirm
 
 ```
 Brag doc updated: ~/Documents/brag/brag.md
