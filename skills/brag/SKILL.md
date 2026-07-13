@@ -20,9 +20,9 @@ running a structured interview.
 ## Invocation
 
 ```
-/brag                                  # last 7 days, no context
-/brag "context summary"                # last 7 days, with upfront framing
-/brag --since 2026-06-01               # custom start date
+/brag                                  # since last run (or last 7 days on first run), through yesterday
+/brag "context summary"                # same range, with upfront framing
+/brag --since 2026-06-01               # custom start date, through yesterday
 /brag --since 2026-06-01 "summary"    # custom start date + framing
 ```
 
@@ -31,20 +31,45 @@ running a structured interview.
 ### 1. Parse arguments
 
 Extract from the skill arguments:
-- `since_date`: value of `--since` flag, or today minus 7 days in `YYYY-MM-DD` format if not provided
+- `since_date`: value of `--since` flag if provided; otherwise computed from last-run state (see below)
 - `context_summary`: any quoted string argument (may be absent)
 
-To compute today minus 7 days:
+The gather window always ends the day before today, never today itself (today's
+activity is still in progress and would look incomplete). Compute:
 ```bash
-date -v-7d +%Y-%m-%d   # macOS
+date -v-1d +%Y-%m-%d   # macOS — this is UNTIL_DATE
 ```
+
+**If `--since` was explicitly provided**, use that value as `since_date` and skip
+the state file entirely — an explicit flag always wins.
+
+**Otherwise, read the last-run state file** to pick up where the previous run left off:
+```bash
+cat ~/.claude/brag/last_run.json 2>/dev/null
+```
+- If the file exists and has a `last_run_date` field, compute `since_date` as that
+  date plus one day:
+  ```bash
+  date -v+1d -j -f %Y-%m-%d LAST_RUN_DATE +%Y-%m-%d   # macOS
+  ```
+- If the file does not exist (first run ever), fall back to today minus 7 days:
+  ```bash
+  date -v-7d +%Y-%m-%d   # macOS
+  ```
+
+**If the computed `since_date` is after `until_date`** (e.g. `/brag` was already
+run today), skip the gather/interview/write steps entirely and tell the user:
+```
+Already up to date — last run covered through LAST_RUN_DATE.
+```
+Then stop.
 
 ### 2. Invoke brag-documenter (gather mode)
 
 Dispatch the `brag-documenter` agent with this prompt (replace values in CAPS):
 
 ```
-{"mode":"gather","since_date":"SINCE_DATE","context_summary":"CONTEXT_SUMMARY"}
+{"mode":"gather","since_date":"SINCE_DATE","until_date":"UNTIL_DATE","context_summary":"CONTEXT_SUMMARY"}
 ```
 
 If no context summary was provided, omit the `context_summary` field entirely.
@@ -83,7 +108,9 @@ Interview complete. N topics accepted, M skipped.
 Writing to brag doc...
 ```
 
-If zero topics were accepted, say so and exit without invoking the write agent.
+If zero topics were accepted, say so and skip step 4 (do not invoke the write
+agent) — but still proceed to step 5 to update the last-run state, since the
+window was gathered and reviewed even though nothing was added.
 
 ### 4. Invoke brag-documenter (write mode)
 
@@ -94,7 +121,19 @@ Dispatch the `brag-documenter` agent with:
 
 Wait for the agent to return `"done"`.
 
-### 5. Confirm
+### 5. Update last-run state
+
+Record `until_date` (from step 1) as the new last-run date, so the next
+invocation picks up the day after:
+```bash
+mkdir -p ~/.claude/brag
+echo '{"last_run_date":"UNTIL_DATE"}' > ~/.claude/brag/last_run.json
+```
+
+Do this even if zero topics were accepted in the interview — an empty window
+still counts as covered and should not be re-gathered next time.
+
+### 6. Confirm
 
 ```
 Brag doc updated: ~/Documents/brag/brag.md

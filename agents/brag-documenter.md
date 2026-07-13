@@ -26,6 +26,7 @@ Parse the JSON object in your input.
 
 **Input fields:**
 - `since_date`: ISO 8601 date string (e.g. `"2026-06-22"`)
+- `until_date`: ISO 8601 date string, inclusive upper bound (e.g. `"2026-06-29"`); defaults to today if absent
 - `context_summary`: optional string the user provided at invocation
 - `context_file`: path to read values/roles from (default: `~/.claude/brag/context.md`)
 
@@ -35,37 +36,39 @@ Run `cat ~/.claude/brag/context.md` via Bash to read the context file. Keep the 
 
 ### Step 2 — Query all sources in parallel
 
-Make as many tool calls as possible in the same round-trip. Replace `SINCE_DATE` with the value of `since_date` in every command.
+Make as many tool calls as possible in the same round-trip. Replace `SINCE_DATE`
+with the value of `since_date` and `UNTIL_DATE` with the value of `until_date`
+(or today's date, if `until_date` was not provided) in every command.
 
 **GitHub (Bash):**
 ```bash
 # PRs you authored
-gh pr list --author @me --state all --json number,title,url,mergedAt,createdAt --limit 50 2>/dev/null | jq --arg d "SINCE_DATE" '[.[] | select((.createdAt // "") >= $d or (.mergedAt // "") >= $d)]'
+gh pr list --author @me --state all --json number,title,url,mergedAt,createdAt --limit 50 2>/dev/null | jq --arg d "SINCE_DATE" --arg u "UNTIL_DATE" '[.[] | select(((.createdAt // "") >= $d and (.createdAt // "") <= ($u + "T23:59:59Z")) or ((.mergedAt // "") >= $d and (.mergedAt // "") <= ($u + "T23:59:59Z")))]'
 
 # Issues you closed
-gh issue list --assignee @me --state closed --json number,title,url,closedAt --limit 50 2>/dev/null | jq --arg d "SINCE_DATE" '[.[] | select((.closedAt // "") >= $d)]'
+gh issue list --assignee @me --state closed --json number,title,url,closedAt --limit 50 2>/dev/null | jq --arg d "SINCE_DATE" --arg u "UNTIL_DATE" '[.[] | select((.closedAt // "") >= $d and (.closedAt // "") <= ($u + "T23:59:59Z"))]'
 
 # PRs you reviewed
-gh search prs --reviewed-by @me --json number,title,url,updatedAt --limit 30 2>/dev/null | jq --arg d "SINCE_DATE" '[.[] | select((.updatedAt // "") >= $d)]'
+gh search prs --reviewed-by @me --json number,title,url,updatedAt --limit 30 2>/dev/null | jq --arg d "SINCE_DATE" --arg u "UNTIL_DATE" '[.[] | select((.updatedAt // "") >= $d and (.updatedAt // "") <= ($u + "T23:59:59Z"))]'
 ```
 
 **Slack:**
 Use `mcp__plugin_slack_slack__slack_search_public_and_private` with query:
-`from:@me after:SINCE_DATE -in:random -in:general`
+`from:@me after:SINCE_DATE before:UNTIL_DATE -in:random -in:general`
 
 For each result thread with more than one message, read it with `slack_read_thread`. Only include threads where your contribution was substantive — more than a one-word reply or reaction. Exclude DMs.
 
 **Linear:**
-Use whatever Linear MCP tools are available (they will be prefixed `mcp__linear__*` or similar). List issues assigned to you that were updated after `since_date` and have status Completed, Done, or In Review. If no Linear tools are available, skip this source and note it.
+Use whatever Linear MCP tools are available (they will be prefixed `mcp__linear__*` or similar). List issues assigned to you that were updated between `since_date` and `until_date` (inclusive) and have status Completed, Done, or In Review. If no Linear tools are available, skip this source and note it.
 
 **Notion:**
-Use whatever Notion MCP tools are available. Search for pages created or last edited by you after `since_date`. If no Notion tools are available, skip this source and note it.
+Use whatever Notion MCP tools are available. Search for pages created or last edited by you between `since_date` and `until_date` (inclusive). If no Notion tools are available, skip this source and note it.
 
 **Granola (Bash + Read):**
 ```bash
-cat ~/Library/Application\ Support/Granola/cache-v6.json 2>/dev/null | jq --arg d "SINCE_DATE" '
+cat ~/Library/Application\ Support/Granola/cache-v6.json 2>/dev/null | jq --arg d "SINCE_DATE" --arg u "UNTIL_DATE" '
   .state.transcripts // [] |
-  [.[] | select((.startedAt // "") >= $d)] |
+  [.[] | select((.startedAt // "") >= $d and (.startedAt // "") <= ($u + "T23:59:59Z"))] |
   [.[] | {title: .title, date: .startedAt, participants: .participants, transcript: .transcript}]
 '
 ```
@@ -73,7 +76,7 @@ If the file does not exist or the command fails, skip Granola and note it.
 
 **Google Calendar (Bash):**
 ```bash
-gcalcli agenda "SINCE_DATE" "$(date +%Y-%m-%d)" --details all --nodeclined --nocolor --tsv 2>/dev/null
+gcalcli agenda "SINCE_DATE" "UNTIL_DATE" --details all --nodeclined --nocolor --tsv 2>/dev/null
 ```
 Parse the TSV output to list: meeting title, date, duration, attendee count. Flag meetings where you are the organizer.
 

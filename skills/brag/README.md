@@ -54,6 +54,15 @@ mkdir -p ~/Documents/brag
 /brag --since 2026-06-01 "context here"
 ```
 
+## Last-run tracking
+
+Each run records the last date it covered in `~/.claude/brag/last_run.json`.
+The next `/brag` (without `--since`) picks up the day after that through
+yesterday, so you never re-gather or miss days between runs. Passing `--since`
+explicitly always overrides this and does not touch the state file's read
+path (it still gets overwritten at the end of the run). Delete
+`~/.claude/brag/last_run.json` to reset to the default 7-day lookback.
+
 ## Customization
 
 - **Brag doc path:** Tell the agent a different path in the `/brag` invocation, or edit the default in `skills/brag/SKILL.md`.
