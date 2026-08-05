@@ -11,9 +11,11 @@ skills/                      # Claude Code skills (invoked with /skill-name)
 └── kb-search/               # Search the KB from any session
 └── kb-status/               # Audit KB health and stale pages
 └── brag/                     # Gather and document work accomplishments
+└── make-it-reviewable/      # Turn an implemented branch into a reviewable one
 
 agents/                      # Claude Code custom subagents
 └── test-quality-reviewer.md # Test quality evaluation across 8 dimensions
+└── commit-auditor.md        # Per-commit verifier for make-it-reviewable
 └── kb-ingest.md             # Writes approved KB chunks, updates index and log
 └── kb-scope.md              # Resolves KB category ambiguity
 └── brag-documenter.md       # Gathers work evidence and merges into brag doc
@@ -60,6 +62,7 @@ ln -s "$REPO/skills/kb-ingest"       ~/.claude/skills/kb-ingest
 ln -s "$REPO/skills/kb-search"       ~/.claude/skills/kb-search
 ln -s "$REPO/skills/kb-status"       ~/.claude/skills/kb-status
 ln -s "$REPO/skills/brag"            ~/.claude/skills/brag
+ln -s "$REPO/skills/make-it-reviewable" ~/.claude/skills/make-it-reviewable
 
 # Agents
 mkdir -p ~/.claude/agents
@@ -67,6 +70,7 @@ ln -s "$REPO/agents/test-quality-reviewer.md"  ~/.claude/agents/test-quality-rev
 ln -s "$REPO/agents/kb-ingest.md"              ~/.claude/agents/kb-ingest.md
 ln -s "$REPO/agents/kb-scope.md"               ~/.claude/agents/kb-scope.md
 ln -s "$REPO/agents/brag-documenter.md"        ~/.claude/agents/brag-documenter.md
+ln -s "$REPO/agents/commit-auditor.md"         ~/.claude/agents/commit-auditor.md
 ```
 
 Claude Code picks up new skills and agents automatically — no restart needed.

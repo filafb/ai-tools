@@ -11,6 +11,7 @@ frontmatter and a system prompt.
 | `kb-ingest` | Writes approved knowledge chunks to ~/.claude/wiki/, updates index.md and log.md | sonnet |
 | `kb-scope` | Resolves category ambiguity for a KB chunk; asks user to confirm or redirect | haiku |
 | `brag-documenter` | Gathers work evidence from 6 sources, clusters into topics with values alignment, and merges approved entries into a persistent brag document. Invoked by /brag skill. |
+| `commit-auditor` | Audits a base..head range commit by commit: message claims vs. code, what/why/how bodies, behavioral TDD reds, history rules. Read-only; findings tagged CONFIRMED/PLAUSIBLE. Invoked by /make-it-reviewable. | sonnet |
 
 ## Installation
 
